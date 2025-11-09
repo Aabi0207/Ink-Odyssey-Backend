@@ -22,12 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default="django-insecure-n@hla7uw^aoh&hrdr8zbyx-1t7*0pz-bs16fmmrjsd4xn7vwd*")
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -87,30 +87,30 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # Use PostgreSQL if DB_NAME is provided, otherwise fall back to SQLite
-USE_POSTGRES = config('DB_NAME', default='') != ''
+# USE_POSTGRES = config('DB_NAME', default='') != ''
 
-if USE_POSTGRES:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": config('DB_NAME'),
-            "USER": config('DB_USER'),
-            "PASSWORD": config('DB_PASSWORD'),
-            "HOST": config('DB_HOST'),
-            "PORT": config('DB_PORT', default=5432, cast=int),
-            "OPTIONS": {
-                "sslmode": "require",  # Required for Supabase
-            },
-        }
-    }
-else:
+# if USE_POSTGRES:
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.postgresql",
+#             "NAME": config('DB_NAME'),
+#             "USER": config('DB_USER'),
+#             "PASSWORD": config('DB_PASSWORD'),
+#             "HOST": config('DB_HOST'),
+#             "PORT": config('DB_PORT', default=5432, cast=int),
+#             "OPTIONS": {
+#                 "sslmode": "require",  # Required for Supabase
+#             },
+#         }
+#     }
+# else:
     # SQLite for local development
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
+}
 
 
 # Password validation
@@ -196,7 +196,6 @@ SIMPLE_JWT = {
 # CORS Settings
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:5173',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 CORS_ALLOW_CREDENTIALS = True
