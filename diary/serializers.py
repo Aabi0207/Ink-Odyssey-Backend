@@ -8,7 +8,7 @@ class ContentBlockSerializer(serializers.ModelSerializer):
     """Serializer for ContentBlock model"""
     
     # Add a custom field to handle base64 file uploads
-    file_data = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    file_data = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
     
     class Meta:
         model = ContentBlock
