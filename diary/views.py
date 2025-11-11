@@ -33,6 +33,36 @@ class DiaryEntryListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         """Set the author to the current user when creating"""
         serializer.save(author=self.request.user)
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to add better error logging"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Received POST data: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            logger.error(f"Validation errors: {serializer.errors}")
+            return Response(
+                {
+                    'error': 'Validation failed',
+                    'details': serializer.errors,
+                    'received_data': request.data
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            logger.error(f"Error creating diary entry: {str(e)}", exc_info=True)
+            return Response(
+                {'error': str(e), 'detail': 'Failed to create diary entry'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class DiaryEntryDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -145,7 +175,8 @@ class DiaryStatsView(APIView):
     
     def get(self, request):
         from django.db.models import Count
-        from datetime import datetime, timedelta
+        from datetime import timedelta
+        from django.utils import timezone
         
         user = request.user
         
@@ -153,7 +184,7 @@ class DiaryStatsView(APIView):
         total_entries = DiaryEntry.objects.filter(author=user).count()
         
         # Entries this month
-        today = datetime.now()
+        today = timezone.now()
         first_day_of_month = today.replace(day=1)
         entries_this_month = DiaryEntry.objects.filter(
             author=user,

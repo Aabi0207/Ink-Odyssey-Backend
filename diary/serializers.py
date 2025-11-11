@@ -139,7 +139,7 @@ class DiaryEntryCreateSerializer(serializers.ModelSerializer):
                 data=block_data,
                 context=self.context
             )
-            if block_serializer.is_valid():
+            if block_serializer.is_valid(raise_exception=True):
                 block_serializer.save(diary_entry=diary_entry)
         
         return diary_entry
@@ -166,7 +166,7 @@ class DiaryEntryCreateSerializer(serializers.ModelSerializer):
                     data=block_data,
                     context=self.context
                 )
-                if block_serializer.is_valid():
+                if block_serializer.is_valid(raise_exception=True):
                     block_serializer.save(diary_entry=instance)
         
         return instance
