@@ -145,7 +145,8 @@ class DiaryStatsView(APIView):
     
     def get(self, request):
         from django.db.models import Count
-        from datetime import datetime, timedelta
+        from datetime import timedelta
+        from django.utils import timezone
         
         user = request.user
         
@@ -153,7 +154,7 @@ class DiaryStatsView(APIView):
         total_entries = DiaryEntry.objects.filter(author=user).count()
         
         # Entries this month
-        today = datetime.now()
+        today = timezone.now()
         first_day_of_month = today.replace(day=1)
         entries_this_month = DiaryEntry.objects.filter(
             author=user,
