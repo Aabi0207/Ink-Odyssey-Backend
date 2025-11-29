@@ -63,6 +63,28 @@ class ContentBlockSerializer(serializers.ModelSerializer):
             return content_block
         
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        """Handle base64 file upload during update"""
+        file_data = validated_data.pop('file_data', None)
+        
+        if file_data and file_data.startswith('data:'):
+            # Parse base64 data URL
+            format, datastr = file_data.split(';base64,')
+            ext = format.split('/')[-1]
+            
+            # Create file from base64
+            data = ContentFile(base64.b64decode(datastr))
+            file_name = f"{validated_data.get('block_type', instance.block_type)}_{validated_data.get('order', instance.order)}.{ext}"
+            
+            # Delete old file if it exists
+            if instance.media_file:
+                instance.media_file.delete(save=False)
+            
+            # Save the new file
+            instance.media_file.save(file_name, data, save=False)
+        
+        return super().update(instance, validated_data)
     
     def to_representation(self, instance):
         """Customize the output to include the full media URL"""
@@ -152,22 +174,40 @@ class DiaryEntryCreateSerializer(serializers.ModelSerializer):
         instance.title = validated_data.get('title', instance.title)
         instance.save()
         
-        # If content blocks are provided, delete old ones and create new ones
+        # If content blocks are provided, update them intelligently
         if content_blocks_data is not None:
-            # Delete old media files
-            for block in instance.content_blocks.all():
-                if block.media_file:
-                    block.media_file.delete(save=False)
-            instance.content_blocks.all().delete()
+            existing_blocks = {block.id: block for block in instance.content_blocks.all()}
+            kept_block_ids = set()
             
-            # Create new content blocks
             for block_data in content_blocks_data:
-                block_serializer = ContentBlockSerializer(
-                    data=block_data,
-                    context=self.context
-                )
-                if block_serializer.is_valid(raise_exception=True):
-                    block_serializer.save(diary_entry=instance)
+                block_id = block_data.get('id')
+                
+                if block_id and block_id in existing_blocks:
+                    # Update existing block
+                    kept_block_ids.add(block_id)
+                    block_instance = existing_blocks[block_id]
+                    
+                    block_serializer = ContentBlockSerializer(
+                        block_instance,
+                        data=block_data,
+                        context=self.context,
+                        partial=True
+                    )
+                    if block_serializer.is_valid(raise_exception=True):
+                        block_serializer.save()
+                else:
+                    # Create new block
+                    block_serializer = ContentBlockSerializer(
+                        data=block_data,
+                        context=self.context
+                    )
+                    if block_serializer.is_valid(raise_exception=True):
+                        block_serializer.save(diary_entry=instance)
+            
+            # Delete blocks that are not in the new list
+            for block_id, block in existing_blocks.items():
+                if block_id not in kept_block_ids:
+                    block.delete()
         
         return instance
 
