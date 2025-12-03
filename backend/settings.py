@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     # Local apps
     "users",
     "diary",
+    "self_reflection",
 ]
 
 MIDDLEWARE = [
