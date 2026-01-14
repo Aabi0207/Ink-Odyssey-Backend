@@ -63,6 +63,7 @@ class ReflectionResponseSerializer(serializers.ModelSerializer):
             'range_response',
             'choice_response',
             'text_response',
+            'number_response',
             'created_at',
             'updated_at'
         ]
@@ -75,6 +76,7 @@ class ReflectionResponseCreateSerializer(serializers.Serializer):
     range_response = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=10)
     choice_response = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     text_response = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    number_response = serializers.FloatField(required=False, allow_null=True)
     
     def validate(self, data):
         """Validate that at least one response field is provided"""
@@ -107,6 +109,10 @@ class ReflectionResponseCreateSerializer(serializers.Serializer):
         elif question.question_type == 'text':
             if not data.get('text_response'):
                 raise serializers.ValidationError({'text_response': 'Text response is required for this question.'})
+        
+        elif question.question_type == 'number':
+            if data.get('number_response') is None:
+                raise serializers.ValidationError({'number_response': 'Number response is required for this question.'})
         
         data['question'] = question
         return data

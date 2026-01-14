@@ -25,12 +25,13 @@ HEATMAP_COLORS = {
 class ReflectionQuestion(models.Model):
     """
     Represents a self-reflection question that can be asked to users.
-    Questions can be of different types: range, multiple choice, or text.
+    Questions can be of different types: range, multiple choice, text, or number.
     """
     QUESTION_TYPES = (
         ('range', 'Range (1-10)'),
         ('choice', 'Multiple Choice'),
         ('text', 'Text Response'),
+        ('number', 'Number Input'),
     )
     
     question_text = models.CharField(max_length=500)
@@ -121,8 +122,12 @@ class ReflectionQuestion(models.Model):
         return {}
     
     def save(self, *args, **kwargs):
-        """Override save to auto-generate color mapping if not provided"""
-        if not self.color_mapping:
+        """Override save to auto-generate color mapping if not provided or if choices changed"""
+        # Always regenerate color mapping for choice and range questions
+        # This ensures colors are updated when choices are modified
+        if self.question_type in ['choice', 'range']:
+            self.color_mapping = self.generate_color_mapping()
+        elif not self.color_mapping:
             self.color_mapping = self.generate_color_mapping()
         super().save(*args, **kwargs)
 
@@ -192,6 +197,11 @@ class ReflectionResponse(models.Model):
         null=True,
         help_text="Response for text-type questions"
     )
+    number_response = models.FloatField(
+        blank=True,
+        null=True,
+        help_text="Response for number-type questions (integer or decimal)"
+    )
     
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
@@ -219,6 +229,9 @@ class ReflectionResponse(models.Model):
         
         if self.question.question_type == 'text' and not self.text_response:
             raise ValidationError('Text questions must have a text response.')
+        
+        if self.question.question_type == 'number' and self.number_response is None:
+            raise ValidationError('Number questions must have a number response.')
         
         # Validate choice is in the allowed choices
         if self.question.question_type == 'choice' and self.choice_response:

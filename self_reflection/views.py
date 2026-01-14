@@ -338,6 +338,12 @@ class SelfReflectionViewSet(viewsets.ModelViewSet):
                     question, reflections
                 )
             
+            elif question.question_type == 'number':
+                # Get time series data for line chart (similar to range)
+                question_data['line_chart'] = self._get_number_line_chart_data(
+                    question, reflections, start_date, days
+                )
+            
             dashboard_data['questions'].append(question_data)
         
         return Response(dashboard_data)
@@ -498,3 +504,43 @@ class SelfReflectionViewSet(viewsets.ModelViewSet):
             }
         
         return distribution
+
+    def _get_number_line_chart_data(self, question, reflections, start_date, days):
+        """Generate line chart data for number questions"""
+        responses = ReflectionResponse.objects.filter(
+            daily_reflection__in=reflections,
+            question=question,
+            number_response__isnull=False
+        ).select_related('daily_reflection')
+        
+        # Create date-indexed data
+        data_points = []
+        current_date = start_date
+        end_date = timezone.now().date()
+        
+        # Group responses by date
+        response_by_date = {}
+        for response in responses:
+            response_by_date[response.daily_reflection.date] = response.number_response
+        
+        while current_date <= end_date:
+            value = response_by_date.get(current_date)
+            data_points.append({
+                'date': current_date.isoformat(),
+                'value': round(value, 2) if value is not None else None,
+            })
+            current_date += timedelta(days=1)
+        
+        # Calculate statistics
+        values = [r.number_response for r in responses]
+        stats = {
+            'average': round(sum(values) / len(values), 2) if values else None,
+            'min': round(min(values), 2) if values else None,
+            'max': round(max(values), 2) if values else None,
+            'count': len(values)
+        }
+        
+        return {
+            'data': data_points,
+            'statistics': stats
+        }
