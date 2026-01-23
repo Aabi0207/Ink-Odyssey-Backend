@@ -4,11 +4,15 @@ from .models import ReflectionQuestion, SelfReflection, ReflectionResponse
 
 class ReflectionQuestionSerializer(serializers.ModelSerializer):
     """Serializer for ReflectionQuestion model"""
+    author_id = serializers.PrimaryKeyRelatedField(source='author', read_only=True)
+    author_email = serializers.EmailField(source='author.email', read_only=True)
     
     class Meta:
         model = ReflectionQuestion
         fields = [
             'id',
+            'author_id',
+            'author_email',
             'question_text',
             'question_type',
             'min_value',
@@ -21,7 +25,7 @@ class ReflectionQuestionSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'color_mapping']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'color_mapping', 'author_id', 'author_email']
     
     def validate(self, data):
         """Custom validation"""
@@ -81,9 +85,13 @@ class ReflectionResponseCreateSerializer(serializers.Serializer):
     def validate(self, data):
         """Validate that at least one response field is provided"""
         question_id = data.get('question_id')
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if request is None or user is None or not user.is_authenticated:
+            raise serializers.ValidationError({'detail': 'Authentication required to answer questions.'})
         
         try:
-            question = ReflectionQuestion.objects.get(id=question_id, is_active=True)
+            question = ReflectionQuestion.objects.get(id=question_id, is_active=True, author=user)
         except ReflectionQuestion.DoesNotExist:
             raise serializers.ValidationError({'question_id': 'Invalid or inactive question.'})
         

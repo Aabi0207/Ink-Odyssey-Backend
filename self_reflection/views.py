@@ -32,7 +32,8 @@ class ReflectionQuestionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Optionally filter by active status"""
-        queryset = ReflectionQuestion.objects.all()
+        user = self.request.user
+        queryset = ReflectionQuestion.objects.filter(author=user)
         
         # Filter by active status if provided
         is_active = self.request.query_params.get('is_active', None)
@@ -45,18 +46,22 @@ class ReflectionQuestionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(category__iexact=category)
         
         return queryset
+
+    def perform_create(self, serializer):
+        """Associate new questions with the requesting user"""
+        serializer.save(author=self.request.user)
     
     @action(detail=False, methods=['get'])
     def active(self, request):
         """Get all active questions ordered by display order"""
-        questions = ReflectionQuestion.objects.filter(is_active=True).order_by('order', 'id')
+        questions = self.get_queryset().filter(is_active=True).order_by('order', 'id')
         serializer = self.get_serializer(questions, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def categories(self, request):
         """Get list of all question categories"""
-        categories = ReflectionQuestion.objects.filter(
+        categories = self.get_queryset().filter(
             is_active=True
         ).values_list('category', flat=True).distinct()
         return Response({'categories': [c for c in categories if c]})
@@ -187,7 +192,11 @@ class SelfReflectionViewSet(viewsets.ModelViewSet):
         total_reflections = reflections.count()
         
         # Get response statistics for range questions
-        range_questions = ReflectionQuestion.objects.filter(question_type='range', is_active=True)
+        range_questions = ReflectionQuestion.objects.filter(
+            question_type='range',
+            is_active=True,
+            author=request.user
+        )
         question_stats = []
         
         for question in range_questions:
@@ -287,9 +296,9 @@ class SelfReflectionViewSet(viewsets.ModelViewSet):
         
         # Get all active questions or specific question
         if question_id:
-            questions = ReflectionQuestion.objects.filter(id=question_id, is_active=True)
+            questions = ReflectionQuestion.objects.filter(id=question_id, is_active=True, author=request.user)
         else:
-            questions = ReflectionQuestion.objects.filter(is_active=True)
+            questions = ReflectionQuestion.objects.filter(is_active=True, author=request.user)
         
         dashboard_data = {
             'overview': {

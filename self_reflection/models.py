@@ -36,6 +36,14 @@ class ReflectionQuestion(models.Model):
     
     question_text = models.CharField(max_length=500)
     question_type = models.CharField(max_length=10, choices=QUESTION_TYPES, default='range')
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reflection_questions',
+        null=True,
+        blank=True,
+        help_text="Owner/creator of this question"
+    )
     
     # For range questions (1-10)
     min_value = models.IntegerField(default=1, validators=[MinValueValidator(1)])
