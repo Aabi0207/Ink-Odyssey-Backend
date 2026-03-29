@@ -6,6 +6,7 @@ from .views import (
     ContentBlockDetailView,
     DiaryEntryByDateView,
     DiaryStatsView,
+    DiaryTagListCreateView,
 )
 
 urlpatterns = [
@@ -20,4 +21,7 @@ urlpatterns = [
     
     # Statistics endpoint
     path('stats/', DiaryStatsView.as_view(), name='diary-stats'),
+
+    # Tag endpoints
+    path('tags/', DiaryTagListCreateView.as_view(), name='diary-tag-list-create'),
 ]

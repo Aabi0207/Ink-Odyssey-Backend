@@ -3,6 +3,37 @@ from django.conf import settings
 from django.utils import timezone
 
 
+class DiaryTag(models.Model):
+    """
+    Reusable tag/category for diary entries.
+    Tags are user-scoped and can be attached to multiple entries.
+    """
+    name = models.CharField(max_length=50)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='diary_tags'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Diary Tag'
+        verbose_name_plural = 'Diary Tags'
+        ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'name'],
+                name='unique_diary_tag_per_user'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['author', 'name']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.author.email})"
+
+
 class DiaryEntry(models.Model):
     """
     Represents a diary entry.
@@ -17,6 +48,11 @@ class DiaryEntry(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+    tags = models.ManyToManyField(
+        DiaryTag,
+        related_name='entries',
+        blank=True
+    )
     
     class Meta:
         verbose_name = 'Diary Entry'
