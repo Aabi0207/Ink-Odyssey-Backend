@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "users",
     "diary",
     "self_reflection",
+    "memory_archive",
 ]
 
 MIDDLEWARE = [
